@@ -1,8 +1,8 @@
 name       : systemd
-version    : '250.8'
-release    : 105
+version    : '251.7'
+release    : 106
 source     :
-    - https://github.com/systemd/systemd-stable/archive/refs/tags/v250.8.tar.gz : 638a2fc78828765fc97bc73f428205b6dc1d359149b6c6bfe4d2a649cba2cca8
+    - https://github.com/systemd/systemd-stable/archive/refs/tags/v251.7.tar.gz : d5320480b9886ae035fa3637f53a7a59dc2e7de3814390d5583f0eac81ade35e
 license    :
     - LGPL-2.1-or-later
     - GPL-2.0-or-later
@@ -103,6 +103,7 @@ setup      : |
                      -Drpmmacrosdir=no \
                      -Dselinux=false \
                      -Dsplit-usr=true \
+                     -Dsudo-group=true \
                      -Dsysvinit-path=/etc/init.d \
                      -Dtimesyncd=$depends_emul32 \
                      -Dusers-gid=100 \

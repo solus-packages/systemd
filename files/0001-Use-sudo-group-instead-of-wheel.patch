@@ -1,0 +1,193 @@
+From c02e22257a9cac458a6dd7b5bd0f9eccb3faef3a Mon Sep 17 00:00:00 2001
+From: Reilly Brogan <solus@reillybrogan.com>
+Date: Sun, 7 Aug 2022 16:21:16 -0500
+Subject: [PATCH 1/1] Use sudo group instead of wheel
+
+Systemd allows users of the wheel group to access the journal without having to use sudo, however Solus uses the sudo group in place of wheel so convert the wheel rules to use the sudo group instead.
+
+This allows users of the sudo group to have read-only access to the journal logs without having to use sudo (read/write still requires sudo)
+---
+ man/homectl.xml                  |  6 +++---
+ man/journalctl.xml               |  4 ++--
+ man/systemd-journald.service.xml |  4 ++--
+ meson.build                      |  4 ++--
+ meson_options.txt                |  4 ++--
+ src/journal/meson.build          |  4 ++--
+ tmpfiles.d/systemd.conf.in       | 32 ++++++++++++++++----------------
+ 7 files changed, 29 insertions(+), 29 deletions(-)
+
+diff --git a/man/homectl.xml b/man/homectl.xml
+index 7993f96e8b..a4d966d2e8 100644
+--- a/man/homectl.xml
++++ b/man/homectl.xml
+@@ -261,7 +261,7 @@
+         <term><option>-G</option> <replaceable>GROUP</replaceable></term>
+ 
+         <listitem><para>Takes a comma-separated list of auxiliary UNIX groups this user shall belong
+-        to. Example: <option>--member-of=wheel</option> to provide the user with administrator
++        to. Example: <option>--member-of=sudo</option> to provide the user with administrator
+         privileges. Note that <command>systemd-homed</command> does not manage any groups besides a group
+         matching the user in name and numeric UID/GID. Thus any groups listed here must be registered
+         independently, for example with <citerefentry
+@@ -982,10 +982,10 @@
+     <title>Examples</title>
+ 
+     <example>
+-      <title>Create a user <literal>waldo</literal> in the administrator group <literal>wheel</literal>, and
++      <title>Create a user <literal>waldo</literal> in the administrator group <literal>sudo</literal>, and
+       assign 500 MiB disk space to them.</title>
+ 
+-      <programlisting>homectl create waldo --real-name="Waldo McWaldo" -G wheel --disk-size=500M</programlisting>
++      <programlisting>homectl create waldo --real-name="Waldo McWaldo" -G sudo --disk-size=500M</programlisting>
+     </example>
+ 
+     <example>
+diff --git a/man/journalctl.xml b/man/journalctl.xml
+index 424acc9f16..24bb525f45 100644
+--- a/man/journalctl.xml
++++ b/man/journalctl.xml
+@@ -100,10 +100,10 @@
+       members of a few special groups are granted access to the system
+       journal and the journals of other users. Members of the groups
+       <literal>systemd-journal</literal>, <literal>adm</literal>, and
+-      <literal>wheel</literal> can read all journal files. Note
++      <literal>sudo</literal> can read all journal files. Note
+       that the two latter groups traditionally have additional
+       privileges specified by the distribution. Members of the
+-      <literal>wheel</literal> group can often perform administrative
++      <literal>sudo</literal> group can often perform administrative
+       tasks.</para>
+ 
+       <para>The output is paged through <command>less</command> by
+diff --git a/man/systemd-journald.service.xml b/man/systemd-journald.service.xml
+index 8fa864473d..b07470bfb5 100644
+--- a/man/systemd-journald.service.xml
++++ b/man/systemd-journald.service.xml
+@@ -262,10 +262,10 @@ systemd-tmpfiles --create --prefix /var/log/journal</programlisting>
+     <para>Additional users and groups may be granted access to journal
+     files via file system access control lists (ACL). Distributions
+     and administrators may choose to grant read access to all members
+-    of the <literal>wheel</literal> and <literal>adm</literal> system
++    of the <literal>sudo</literal> and <literal>adm</literal> system
+     groups with a command such as the following:</para>
+ 
+-    <programlisting># setfacl -Rnm g:wheel:rx,d:g:wheel:rx,g:adm:rx,d:g:adm:rx /var/log/journal/</programlisting>
++    <programlisting># setfacl -Rnm g:sudo:rx,d:g:sudo:rx,g:adm:rx,d:g:adm:rx /var/log/journal/</programlisting>
+ 
+     <para>Note that this command will update the ACLs both for
+     existing journal files and for future journal files created in the
+diff --git a/meson.build b/meson.build
+index b3e16b9fca..6f43ae2b2b 100644
+--- a/meson.build
++++ b/meson.build
+@@ -896,7 +896,7 @@ foreach option : ['adm-gid',
+ endforeach
+ 
+ conf.set10('ENABLE_ADM_GROUP', get_option('adm-group'))
+-conf.set10('ENABLE_WHEEL_GROUP', get_option('wheel-group'))
++conf.set10('ENABLE_SUDO_GROUP', get_option('sudo-group'))
+ 
+ dev_kvm_mode = get_option('dev-kvm-mode')
+ conf.set_quoted('DEV_KVM_MODE', dev_kvm_mode) # FIXME: convert to 0o… notation
+@@ -4082,7 +4082,7 @@ foreach tuple : [
+         ['utmp'],
+         ['ldconfig'],
+         ['adm group',             get_option('adm-group')],
+-        ['wheel group',           get_option('wheel-group')],
++        ['sudo group',           get_option('sudo-group')],
+         ['gshadow'],
+         ['debug hashmap'],
+         ['debug mmap cache'],
+diff --git a/meson_options.txt b/meson_options.txt
+index 401f0933d7..129b747ee7 100644
+--- a/meson_options.txt
++++ b/meson_options.txt
+@@ -233,8 +233,8 @@ option('container-uid-base-max', type : 'integer', value : 0x6FFF0000,
+        description : 'maximum container UID base')
+ option('adm-group', type : 'boolean',
+        description : 'the ACL for adm group should be added')
+-option('wheel-group', type : 'boolean',
+-       description : 'the ACL for wheel group should be added')
++option('sudo-group', type : 'boolean',
++       description : 'the ACL for sudo group should be added')
+ option('nobody-user', type : 'string',
+        description : 'The name of the nobody user (the one with UID 65534)',
+        value : 'nobody')
+diff --git a/src/journal/meson.build b/src/journal/meson.build
+index 1372849cb7..fa07518a14 100644
+--- a/src/journal/meson.build
++++ b/src/journal/meson.build
+@@ -67,10 +67,10 @@ if get_option('create-log-dirs')
+                         'sh', '-c',
+                         'setfacl -nm g:adm:rx,d:g:adm:rx $DESTDIR/var/log/journal || :')
+         endif
+-        if get_option('wheel-group')
++        if get_option('sudo-group')
+                 meson.add_install_script(
+                         'sh', '-c',
+-                        'setfacl -nm g:wheel:rx,d:g:wheel:rx $DESTDIR/var/log/journal || :')
++                        'setfacl -nm g:sudo:rx,d:g:sudo:rx $DESTDIR/var/log/journal || :')
+         endif
+ endif
+ 
+diff --git a/tmpfiles.d/systemd.conf.in b/tmpfiles.d/systemd.conf.in
+index 9b2357cd31..69b726346e 100644
+--- a/tmpfiles.d/systemd.conf.in
++++ b/tmpfiles.d/systemd.conf.in
+@@ -30,18 +30,18 @@ d /run/log 0755 root root -
+ z /run/log/journal 2755 root systemd-journal - -
+ Z /run/log/journal/%m ~2750 root systemd-journal - -
+ {% if HAVE_ACL %}
+-{% if ENABLE_ADM_GROUP and ENABLE_WHEEL_GROUP %}
+-a+ /run/log/journal    - - - - d:group::r-x,d:group:adm:r-x,d:group:wheel:r-x,group::r-x,group:adm:r-x,group:wheel:r-x
+-a+ /run/log/journal/%m - - - - d:group:adm:r-x,d:group:wheel:r-x,group:adm:r-x,group:wheel:r-x
+-a+ /run/log/journal/%m/*.journal* - - - - group:adm:r--,group:wheel:r--
++{% if ENABLE_ADM_GROUP and ENABLE_SUDO_GROUP %}
++a+ /run/log/journal    - - - - d:group::r-x,d:group:adm:r-x,d:group:sudo:r-x,group::r-x,group:adm:r-x,group:sudo:r-x
++a+ /run/log/journal/%m - - - - d:group:adm:r-x,d:group:sudo:r-x,group:adm:r-x,group:sudo:r-x
++a+ /run/log/journal/%m/*.journal* - - - - group:adm:r--,group:sudo:r--
+ {% elif ENABLE_ADM_GROUP %}
+ a+ /run/log/journal    - - - - d:group::r-x,d:group:adm:r-x,group::r-x,group:adm:r-x
+ a+ /run/log/journal/%m - - - - d:group:adm:r-x,group:adm:r-x
+ a+ /run/log/journal/%m/*.journal* - - - - group:adm:r--
+-{% elif ENABLE_WHEEL_GROUP %}
+-a+ /run/log/journal    - - - - d:group::r-x,d:group:wheel:r-x,group::r-x,group:wheel:r-x
+-a+ /run/log/journal/%m - - - - d:group:wheel:r-x,group:wheel:r-x
+-a+ /run/log/journal/%m/*.journal* - - - - group:wheel:r--
++{% elif ENABLE_SUDO_GROUP %}
++a+ /run/log/journal    - - - - d:group::r-x,d:group:sudo:r-x,group::r-x,group:sudo:r-x
++a+ /run/log/journal/%m - - - - d:group:sudo:r-x,group:sudo:r-x
++a+ /run/log/journal/%m/*.journal* - - - - group:sudo:r--
+ {% endif %}
+ {% endif %}
+ 
+@@ -49,18 +49,18 @@ z /var/log/journal 2755 root systemd-journal - -
+ z /var/log/journal/%m 2755 root systemd-journal - -
+ z /var/log/journal/%m/system.journal 0640 root systemd-journal - -
+ {% if HAVE_ACL %}
+-{% if ENABLE_ADM_GROUP and ENABLE_WHEEL_GROUP %}
+-a+ /var/log/journal    - - - - d:group::r-x,d:group:adm:r-x,d:group:wheel:r-x,group::r-x,group:adm:r-x,group:wheel:r-x
+-a+ /var/log/journal/%m - - - - d:group:adm:r-x,d:group:wheel:r-x,group:adm:r-x,group:wheel:r-x
+-a+ /var/log/journal/%m/system.journal - - - - group:adm:r--,group:wheel:r--
++{% if ENABLE_ADM_GROUP and ENABLE_SUDO_GROUP %}
++a+ /var/log/journal    - - - - d:group::r-x,d:group:adm:r-x,d:group:sudo:r-x,group::r-x,group:adm:r-x,group:sudo:r-x
++a+ /var/log/journal/%m - - - - d:group:adm:r-x,d:group:sudo:r-x,group:adm:r-x,group:sudo:r-x
++a+ /var/log/journal/%m/system.journal - - - - group:adm:r--,group:sudo:r--
+ {% elif ENABLE_ADM_GROUP %}
+ a+ /var/log/journal    - - - - d:group::r-x,d:group:adm:r-x,group::r-x,group:adm:r-x
+ a+ /var/log/journal/%m - - - - d:group:adm:r-x,group:adm:r-x
+ a+ /var/log/journal/%m/system.journal - - - - group:adm:r--
+-{% elif ENABLE_WHEEL_GROUP %}
+-a+ /var/log/journal    - - - - d:group::r-x,d:group:wheel:r-x,group::r-x,group:wheel:r-x
+-a+ /var/log/journal/%m - - - - d:group:wheel:r-x,group:wheel:r-x
+-a+ /var/log/journal/%m/system.journal - - - - group:wheel:r--
++{% elif ENABLE_SUDO_GROUP %}
++a+ /var/log/journal    - - - - d:group::r-x,d:group:sudo:r-x,group::r-x,group:sudo:r-x
++a+ /var/log/journal/%m - - - - d:group:sudo:r-x,group:sudo:r-x
++a+ /var/log/journal/%m/system.journal - - - - group:sudo:r--
+ {% endif %}
+ {% endif %}
+ 
+-- 
+2.35.4
+

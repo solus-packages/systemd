@@ -222,7 +222,6 @@ libc.so.6:getgrnam
 libc.so.6:getgrnam_r
 libc.so.6:getgrouplist
 libc.so.6:getgroups
-libc.so.6:getline
 libc.so.6:getmntent
 libc.so.6:getnameinfo
 libc.so.6:getopt_long
@@ -245,7 +244,6 @@ libc.so.6:getsockopt
 libc.so.6:getspnam
 libc.so.6:getspnam_r
 libc.so.6:gettid
-libc.so.6:gettimeofday
 libc.so.6:getuid
 libc.so.6:getutxent
 libc.so.6:getutxid
@@ -302,6 +300,8 @@ libc.so.6:mlock
 libc.so.6:mlockall
 libc.so.6:mmap64
 libc.so.6:mount
+libc.so.6:mount_setattr
+libc.so.6:move_mount
 libc.so.6:mq_getattr
 libc.so.6:mq_open
 libc.so.6:mq_unlink
@@ -315,6 +315,7 @@ libc.so.6:nice
 libc.so.6:nl_langinfo
 libc.so.6:open64
 libc.so.6:open_memstream
+libc.so.6:open_tree
 libc.so.6:openat64
 libc.so.6:opendir
 libc.so.6:optarg
@@ -537,7 +538,6 @@ libcryptsetup.so.12:crypt_get_type
 libcryptsetup.so.12:crypt_get_volume_key_size
 libcryptsetup.so.12:crypt_init
 libcryptsetup.so.12:crypt_init_by_name
-libcryptsetup.so.12:crypt_init_data_device
 libcryptsetup.so.12:crypt_keyslot_add_by_volume_key
 libcryptsetup.so.12:crypt_keyslot_destroy
 libcryptsetup.so.12:crypt_keyslot_max
@@ -575,6 +575,7 @@ libfdisk.so.1:fdisk_get_first_lba
 libfdisk.so.1:fdisk_get_last_lba
 libfdisk.so.1:fdisk_get_nsectors
 libfdisk.so.1:fdisk_get_partitions
+libfdisk.so.1:fdisk_get_sector_size
 libfdisk.so.1:fdisk_has_label
 libfdisk.so.1:fdisk_is_labeltype
 libfdisk.so.1:fdisk_new_context
